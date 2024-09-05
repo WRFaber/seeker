@@ -55,6 +55,7 @@ def train():
 
     random_seed = 0         # set random seed if required (0 = no random seed)
     #####################################################
+    env_name = 'seeker'
 
     # state space dimension
     state_dim = 2
@@ -138,7 +139,7 @@ def train():
         print("--------------------------------------------------------------------------------------------")
         print("setting random seed to ", random_seed)
         torch.manual_seed(random_seed)
-        env.seed(random_seed)
+        # env.seed(random_seed)
         np.random.seed(random_seed)
     #####################################################
 

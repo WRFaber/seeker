@@ -1,7 +1,6 @@
 import random
 from datetime import timedelta
 
-import torch
 from helpers import (
     format_fragment_json_degrees,
     read_text_file,
@@ -9,93 +8,89 @@ from helpers import (
 from sensor import Sensor
 
 
-def generate_episode(
-    sensor: Sensor,
-    sample_paths,
-    agent_network: AgentNetwork,
-    device="cpu",
-    horizon=10,
-    max_episode_len=100,
-    record_looks=False,
-):
-    sample = random.sample(sample_paths, 1)
-    raw_data = read_text_file(sample[0])
-    fragmentation = format_fragment_json_degrees(raw_data)
-    offset = 0
-    reward = 0
-    initial_state = (
-        round(fragmentation[0][1][0]["azimuth"]) + offset,
-        round(fragmentation[0][1][0]["elevation"]) + offset,
-    )
-    sensor.initialize_look_direction(initial_state)
-    state = sensor.get_state(device, reward)
-    ep_length = 0
-    max_date = fragmentation[-1][0]
-    current_date = fragmentation[0][0]
-    objects_detected = []
-    rolling_horizon = None
-    while current_date < max_date:
-        # Convert state to tensor and pass through policy network to get action probabilities
-        ep_length += 1
-        if rolling_horizon is None:
-            rolling_horizon = state
-        else:
-            rolling_horizon = torch.vstack((rolling_horizon, state))
-        if len(rolling_horizon) > horizon:
-            rolling_horizon = rolling_horizon[-horizon:]
-        else:
-            ...
-        action = agent_network.select_action(rolling_horizon)
-
-        # Take the action and get the new state and reward
-        sensor.move(action)
-        available_looks = None
-        for x in fragmentation:
-            if x[0] == current_date:
-                available_looks = x
-        objects_observable = []
-        new_objects_detected = []
-        looks = []
-        if available_looks is not None:
-            for x in available_looks[1]:
-                objects_observable.append(x["objectId"])
-                az_diff = abs(sensor.look_direction[0] - x["azimuth"])
-                el_diff = abs(sensor.look_direction[1] - x["elevation"])
-                if az_diff < sensor.az_fov and el_diff < sensor.el_fov:
-                    if len(objects_detected) == 0:
-                        reward += 1.0
-                        objects_detected.append(x["objectId"])
-                        new_objects_detected.append(x["objectId"])
-                    else:
-                        new_object = objects_detected.count(x["objectId"])
-                        if new_object == 0:
-                            reward += 1.0
-                            objects_detected.append(x["objectId"])
-                            new_objects_detected.append(x["objectId"])
-                        else:
-                            reward += 0.25
-                else:
-                    if len(objects_detected) == 0:
-                        reward -= 0.1
-                    else:
-                        eluded = objects_detected.count(x["objectId"])
-                        if eluded == 0:
-                            reward -= 0.1
-                if record_looks:
-                    look = [x["azimuth"], x["elevation"]]
-                    looks.append(look)
-        else:
-            reward = 0
-        # Add the state, action, and reward to the episode
-        new_episode_sample = (state, action, reward)
-        yield (
-            new_episode_sample,
-            agent_network.saved_log_probs[-1],
-            list(set(objects_observable)),
-            new_objects_detected,
-            looks,
+class Seeker_Environment:
+    def __init__(self, paths, sensor: Sensor, device="cpu",):
+        self.sample_paths = paths
+        self.device = device
+        self.sample = random.sample(paths)
+        self.raw_data = read_text_file(self.sample[0])
+        self.fragmentation = format_fragment_json_degrees(self.raw_data)
+        self.offset = 0
+        self.reward = 0
+        self.initial_state = (
+            round(self.fragmentation[0][1][0]["azimuth"]) + self.offset,
+            round(self.fragmentation[0][1][0]["elevation"]) + self.offset,
         )
+        self.current_date = self.fragmentation[0][0]
+        self.max_date = self.fragmentation[-1][0]
+        self.sensor = sensor
+        self.sensor.initialize_look_direction(self.initial_state)
+        self.ep_length = 0
+        self.objects_detected = []
 
-        # Update the current state
-        state = sensor.get_state(device, reward)
-        current_date = current_date + timedelta(seconds=10)
+    def reset(self):
+        self.sample = random.sample(self.sample_paths,1)
+        self.raw_data = read_text_file(self.sample[0])
+        self.fragmentation = format_fragment_json_degrees(self.raw_data)
+        self.offset = 0
+        self.reward = 0
+        self.initial_state = (
+            round(self.fragmentation[0][1][0]["azimuth"]) + self.offset,
+            round(self.fragmentation[0][1][0]["elevation"]) + self.offset,
+        )
+        self.current_date = self.fragmentation[0][0]
+        self.max_date = self.fragmentation[-1][0]
+        self.sensor.initialize_look_direction(self.initial_state)
+        self.ep_length = 0
+        self.objects_detected = []
+        
+    def step(self, action):
+        self.reward = 0.0
+        self.ep_length += 1
+        if self.current_date < self.max_date:
+            done = False
+            # Take the action and get the new state and reward
+            self.sensor.move(action)
+            available_looks = None
+            for x in self.fragmentation:
+                if x[0] == self.current_date:
+                    available_looks = x
+            self.objects_observable = []
+            self.new_objects_detected = []
+            if available_looks is not None:
+                for x in available_looks[1]:
+                    self.objects_observable.append(x["objectId"])
+                    az_diff = abs(self.sensor.look_direction[0] - x["azimuth"])
+                    el_diff = abs(self.sensor.look_direction[1] - x["elevation"])
+                    if az_diff < self.sensor.az_fov and el_diff < self.sensor.el_fov:
+                        if len(self.objects_detected) == 0:
+                            self.reward += 1.0
+                            self.objects_detected.append(x["objectId"])
+                            self.new_objects_detected.append(x["objectId"])
+                        else:
+                            new_object = self.objects_detected.count(x["objectId"])
+                            if new_object == 0:
+                                self.reward += 1.0
+                                self.objects_detected.append(x["objectId"])
+                                self.new_objects_detected.append(x["objectId"])
+                            else:
+                                self.reward += 0.25
+                    else:
+                        if len(self.objects_detected) == 0:
+                            self.reward -= 0.1
+                        else:
+                            eluded = self.objects_detected.count(x["objectId"])
+                            if eluded == 0:
+                                self.reward -= 0.1
+            else:
+                self.reward = 0
+            # Update the current state
+            self.state = self.sensor.get_state(self.device, self.reward)
+            self.current_date = self.current_date + timedelta(seconds=10)
+        else: 
+            done = True
+        yield (
+                self.state,
+                self.reward,
+                done
+            )
