@@ -5,56 +5,80 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from controlled_environment import generate_episode
+from controlled_environment import Seeker_Environment
 from sensor import Sensor
+from helpers import validate_episodes
+from ppo import PPO
 
-# Folder Path
-path = os.getenv("DATA_PATH")
+####### initialize environment hyperparameters ######
 
-# Change the directory
-os.chdir(path)
+path = os.getenv("DATA_PATH")                              # Read data path from .env
 
-# INITIALIZATION
-ACTIONS = ["up", "down", "left", "right"]
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-EPISODES = 5000
-# POLICY INITIALIZATION
-load_model = True
-dim_hidden_layers = 128
-num_hidden_layers = 2
-input_dimension = 3
-output_dimension = 25
-agent_network = AgentNetwork(
-    input_dimension, dim_hidden_layers, output_dimension, num_hidden_layers
-)
-agent_network.to(DEVICE)
-lengths = []
-rewards = []
-gamma = 0.99
-lr_policy_net = 2**-16
-optimizer = torch.optim.Adam(agent_network.parameters(), lr=lr_policy_net)
+os.chdir(path)                                             # Change path to data path
 
+has_continuous_action_space = False                        # continuous action space; else discrete
 
-# SENSOR PARAMETERS
-sensor = Sensor()
+max_ep_len = 1000                                          # max timesteps in one episode
+max_training_timesteps = int(3e6)                          # break training loop if timeteps > max_training_timesteps
+
+print_freq = max_ep_len * 10                               # print avg reward in the interval (in num timesteps)
+log_freq = max_ep_len * 2                                  # log avg reward in the interval (in num timesteps)
+save_model_freq = int(1e5)                                 # save model frequency (in num timesteps)
+
+action_std = 0.6                                           # starting std for action distribution (Multivariate Normal)
+action_std_decay_rate = 0.05                               # linearly decay action_std (action_std = action_std - action_std_decay_rate)
+min_action_std = 0.1                                       # minimum action_std (stop decay after action_std <= min_action_std)
+action_std_decay_freq = int(2.5e5)                         # action_std decay frequency (in num timesteps)
 
 sample_paths = []
-# iterate through all file
-for file in os.listdir():
-    # Check file is in json format
-    if file.endswith(".json"):
-        file_path = f"{path}/{file}"
-        sample_paths.append(file_path)
-sample_paths = sample_paths
+for file in os.listdir():                                  # iterate through all files in data path
+    if file.endswith(".json"):                             # Check file is in json format
+        file_path = f"{path}/{file}"                       #
+        sample_paths.append(file_path)                     # If json add to sample paths
+training_sample_paths = sample_paths[:350]                 # use first 350 as training paths remaing will be used for test
+valid_paths = validate_episodes(training_sample_paths)     # ensure training paths are valid fragmentations that are visible from sensor
 
-# Fixing random state for reproducibility
-np.random.seed(19680801)
+#####################################################
+
+## Note : print/log frequencies should be > than max_ep_len
+
+################ PPO hyperparameters ################
+update_timestep = max_ep_len * 4      # update policy every n timesteps
+K_epochs = 80               # update policy for K epochs in one PPO update
+
+eps_clip = 0.2          # clip parameter for PPO
+gamma = 0.99            # discount factor
+
+lr_actor = 0.0003       # learning rate for actor network
+lr_critic = 0.001       # learning rate for critic network
+
+random_seed = 0         # set random seed if required (0 = no random seed)
+#####################################################
+env_name = 'seeker'
+
+sensor = Sensor()
+env = Seeker_Environment(valid_paths,sensor)
+
+# state space dimension
+state_dim = 3
+
+# action space dimension
+if has_continuous_action_space:
+    # action_dim = env.action_space.shape[0]
+    ...
+else:
+    action_dim = 25
+
+load_model = True
+ppo_agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std)
 
 path = os.getenv("MODEL_PATH")
-os.chdir(path+"/Seeker_PPO")
+directory = path + '/' + env_name + '/'
+random_seed = 0
+run_num_pretrained = 0
+checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(env_name, random_seed, run_num_pretrained)
 if load_model:
-    agent_network = torch.load("./Seeker_Network.pth")
-    agent_network.to(DEVICE)
+    ppo_agent.load(checkpoint_path)
 
 
 def random_walk(num_steps, max_step=0.05):
@@ -69,21 +93,24 @@ def update_lines(num, walks, lines):
     for line, dot, walk in zip(lines, dots, walks):
         steps = []
         for i in range(num + 1):
-            az_rad = np.deg2rad(walk[i][0][0].to("cpu").numpy()[0][0])
-            el_rad = np.deg2rad(walk[i][0][0].to("cpu").numpy()[0][1])
+            az_rad = np.deg2rad(walk[i][0][0].to("cpu")[0].item())
+            el_rad = np.deg2rad(walk[i][0][0].to("cpu")[1].item())
             z = sin(el_rad)
             y = sin(az_rad) * cos(el_rad)
             x = cos(az_rad) * cos(el_rad)
             steps.append([x, y, z])
         line.set_data_3d(np.array(steps).T)
         looks = []
-        for look in walk[num][4]:
-            az_rad = np.deg2rad(look[0])
-            el_rad = np.deg2rad(look[1])
-            z = sin(el_rad)
-            y = sin(az_rad) * cos(el_rad)
-            x = cos(az_rad) * cos(el_rad)
-            looks.append([x, y, z])
+        if walk[num][1] != None:
+            for look in walk[num][1][1]:
+                az_rad = np.deg2rad(look['azimuth'])
+                el_rad = np.deg2rad(look['elevation'])
+                z = sin(el_rad)
+                y = sin(az_rad) * cos(el_rad)
+                x = cos(az_rad) * cos(el_rad)
+                looks.append([x, y, z])
+        else:
+            looks = []
         if len(looks) == 0:
             ...
         else:
@@ -95,20 +122,18 @@ def update_lines(num, walks, lines):
 
 
 # Data: 40 random walks as (num_steps, 3) arrays
+def generate_episode():
+    state = env.reset()
+    done = False
+    episode = []
+    while not done:
+        action = ppo_agent.select_action(state)
+        state, _, done, looks = env.step(action)
+        if not done:
+            episode.append((state,looks))
+    return episode
 
-walks = [
-    list(
-        generate_episode(
-            sensor,
-            sample_paths,
-            agent_network=agent_network,
-            device=DEVICE,
-            max_episode_len=1000,
-            record_looks=True,
-        )
-    )
-    for index in range(10)
-]
+walks = [list(generate_episode()) for index in range(10)]
 
 # longer_walks = []
 # for walk in walks:

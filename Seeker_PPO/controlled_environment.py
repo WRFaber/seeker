@@ -12,7 +12,7 @@ class Seeker_Environment:
     def __init__(self, paths, sensor: Sensor, device="cpu",):
         self.sample_paths = paths
         self.device = device
-        self.sample = random.sample(paths)
+        self.sample = random.sample(paths,1)
         self.raw_data = read_text_file(self.sample[0])
         self.fragmentation = format_fragment_json_degrees(self.raw_data)
         self.offset = 0
@@ -43,7 +43,8 @@ class Seeker_Environment:
         self.sensor.initialize_look_direction(self.initial_state)
         self.ep_length = 0
         self.objects_detected = []
-        
+        return self.sensor.get_state(self.device, 0)
+
     def step(self, action):
         self.reward = 0.0
         self.ep_length += 1
@@ -87,10 +88,7 @@ class Seeker_Environment:
             # Update the current state
             self.state = self.sensor.get_state(self.device, self.reward)
             self.current_date = self.current_date + timedelta(seconds=10)
-        else: 
+        else:
             done = True
-        yield (
-                self.state,
-                self.reward,
-                done
-            )
+            available_looks = []
+        return  self.state, self.reward, done, available_looks

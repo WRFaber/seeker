@@ -5,6 +5,8 @@ import numpy as np
 import torch
 from helpers import validate_episodes
 from ppo import PPO
+from controlled_environment import Seeker_Environment
+from sensor import Sensor
 
 
 ################################### Training ###################################
@@ -12,9 +14,9 @@ def train():
     print("============================================================================================")
 
     ####### initialize environment hyperparameters ######
-    
+
     path = os.getenv("DATA_PATH")                              # Read data path from .env
-    
+
     os.chdir(path)                                             # Change path to data path
 
     has_continuous_action_space = False                        # continuous action space; else discrete
@@ -31,10 +33,10 @@ def train():
     min_action_std = 0.1                                       # minimum action_std (stop decay after action_std <= min_action_std)
     action_std_decay_freq = int(2.5e5)                         # action_std decay frequency (in num timesteps)
 
-    sample_paths = []                   
+    sample_paths = []
     for file in os.listdir():                                  # iterate through all files in data path
         if file.endswith(".json"):                             # Check file is in json format
-            file_path = f"{path}/{file}"                       # 
+            file_path = f"{path}/{file}"                       #
             sample_paths.append(file_path)                     # If json add to sample paths
     training_sample_paths = sample_paths[:350]                 # use first 350 as training paths remaing will be used for test
     valid_paths = validate_episodes(training_sample_paths)     # ensure training paths are valid fragmentations that are visible from sensor
@@ -57,8 +59,11 @@ def train():
     #####################################################
     env_name = 'seeker'
 
+    sensor = Sensor()
+    env = Seeker_Environment(valid_paths,sensor)
+
     # state space dimension
-    state_dim = 2
+    state_dim = 3
 
     # action space dimension
     if has_continuous_action_space:
@@ -70,7 +75,7 @@ def train():
     ###################### logging ######################
 
     #### log files for multiple runs are NOT overwritten
-    log_dir = "PPO_logs"
+    log_dir = os.getenv("LOG_PATH")
     if not os.path.exists(log_dir):
           os.makedirs(log_dir)
 
@@ -93,7 +98,7 @@ def train():
     ################### checkpointing ###################
     run_num_pretrained = 0      #### change this to prevent overwriting weights in same env_name folder
 
-    directory = "PPO_preTrained"
+    directory = os.getenv("MODEL_PATH")
     if not os.path.exists(directory):
           os.makedirs(directory)
 
@@ -258,10 +263,9 @@ def train():
 if __name__ == '__main__':
 
     train()
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
