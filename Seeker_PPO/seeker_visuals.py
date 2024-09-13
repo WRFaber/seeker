@@ -4,14 +4,12 @@ from math import cos, sin
 import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from controlled_environment import Seeker_Environment
-from sensor import Sensor
 from helpers import validate_episodes
 from ppo import PPO
+from sensor import Sensor
 
 ####### initialize environment hyperparameters ######
-
 path = os.getenv("DATA_PATH")                              # Read data path from .env
 
 os.chdir(path)                                             # Change path to data path
@@ -56,6 +54,7 @@ random_seed = 0         # set random seed if required (0 = no random seed)
 #####################################################
 env_name = 'seeker'
 
+os.chdir("./")
 sensor = Sensor()
 env = Seeker_Environment(valid_paths,sensor)
 
@@ -161,3 +160,6 @@ ani = animation.FuncAnimation(
 )
 
 plt.show()
+
+path = os.getenv("GIF_PATH")
+ani.save(filename=path+ "/" + env_name + "/trained.gif", writer="pillow")

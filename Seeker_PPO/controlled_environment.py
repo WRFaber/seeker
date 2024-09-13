@@ -22,7 +22,7 @@ class Seeker_Environment:
             round(self.fragmentation[0][1][0]["elevation"]) + self.offset,
         )
         self.current_date = self.fragmentation[0][0]
-        self.max_date = self.fragmentation[-1][0]
+        self.max_date = self.current_date + timedelta(minutes=10)
         self.sensor = sensor
         self.sensor.initialize_look_direction(self.initial_state)
         self.ep_length = 0
@@ -39,7 +39,7 @@ class Seeker_Environment:
             round(self.fragmentation[0][1][0]["elevation"]) + self.offset,
         )
         self.current_date = self.fragmentation[0][0]
-        self.max_date = self.fragmentation[-1][0]
+        self.max_date = self.current_date + timedelta(minutes=10)
         self.sensor.initialize_look_direction(self.initial_state)
         self.ep_length = 0
         self.objects_detected = []

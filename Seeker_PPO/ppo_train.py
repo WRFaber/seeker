@@ -3,9 +3,9 @@ from datetime import datetime
 
 import numpy as np
 import torch
+from controlled_environment import Seeker_Environment
 from helpers import validate_episodes
 from ppo import PPO
-from controlled_environment import Seeker_Environment
 from sensor import Sensor
 
 
@@ -22,7 +22,7 @@ def train():
     has_continuous_action_space = False                        # continuous action space; else discrete
 
     max_ep_len = 1000                                          # max timesteps in one episode
-    max_training_timesteps = int(3e6)                          # break training loop if timeteps > max_training_timesteps
+    max_training_timesteps = int(3e7)                          # break training loop if timeteps > max_training_timesteps
 
     print_freq = max_ep_len * 10                               # print avg reward in the interval (in num timesteps)
     log_freq = max_ep_len * 2                                  # log avg reward in the interval (in num timesteps)
@@ -249,7 +249,6 @@ def train():
         i_episode += 1
 
     log_f.close()
-    env.close()
 
     # print total training time
     print("============================================================================================")
