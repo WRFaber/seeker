@@ -19,7 +19,7 @@ This Repository leverages Proximal Policy Optimization to determine optimal poli
 
 ## Citing 
 
-Please use this bibtex if you want to cite this repository in your publications :
+Please use this bibtex if you want to cite the PPO PyTorch OR this repository in your publications :
 
     @misc{pytorch_minimal_ppo,
         author = {Barhate, Nikhil},
@@ -29,6 +29,16 @@ Please use this bibtex if you want to cite this repository in your publications 
         journal = {GitHub repository},
         howpublished = {\url{https://github.com/nikhilbarhate99/PPO-PyTorch}},
     }
+
+    @misc{seeker,
+        author = {Faber, W. R.},
+        title = {Application of minimal PPO PyTorch Implementation to Seeker},
+        year = {2024},
+        publisher = {GitHub},
+        journal = {GitHub repository},
+        howpublished = {\url{https://github.com/WRFaber/seeker}},
+    }
+
 
 ## Results
 
