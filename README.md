@@ -47,16 +47,16 @@ Please use this bibtex if you want to cite the PPO PyTorch OR this repository in
 
 | Seeker After PPO Training  | Seeker Reward Throughout Training Process|
 | :-------------------------:|:-------------------------: |
-| ![](Seeker_PPO/gifs/seeker/single_frag_trained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_0.png) |
+| ![](Seeker_PPO/gifs/seeker/single_frag_trained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_single.png) |
 
 | Seeker Before Full PPO Training  | Seeker Reward Throughout Training Process|
 | :-------------------------:|:-------------------------: |
-| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_v1.png) |
+| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![]() |
 
 
 | Seeker After Full PPO Training  | Seeker Reward Throughout Training Process|
 | :-------------------------:|:-------------------------: |
-| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_v1.png) |
+| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_all.png) |
 
 
 ## Other Setup and dependencies 
