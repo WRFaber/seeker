@@ -34,12 +34,12 @@ Please use this bibtex if you want to cite this repository in your publications 
 
 | Seeker Before Full PPO Training  | Seeker Reward Throughout Training Process|
 | :-------------------------:|:-------------------------: |
-| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_v1.pngg) |
+| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_v1.png) |
 
 
 | Seeker After Full PPO Training  | Seeker Reward Throughout Training Process|
 | :-------------------------:|:-------------------------: |
-| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_v1.pngg) |
+| ![](Seeker_PPO/gifs/seeker/untrained.gif) |  ![](Seeker_PPO/figures/seeker/PPO_seeker_fig_v1.png) |
 
 
 ## Other Setup and dependencies 
